@@ -1,15 +1,19 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useApp } from '@/contexts/AppContext';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Award, BookOpen, Clock, Flame, TrendingUp, ArrowLeft } from 'lucide-react';
 import { CourseCard } from '@/components/courses/CourseCard';
+import { Certificate } from '@/components/certificates/Certificate';
 
 export default function Profile() {
   const { user, courses } = useApp();
   const navigate = useNavigate();
+  const [selectedCertificate, setSelectedCertificate] = useState<any>(null);
 
   if (!user) {
     navigate('/login');
@@ -112,14 +116,40 @@ export default function Profile() {
         {/* Completed Courses */}
         {completedCoursesList.length > 0 && (
           <div>
-            <h2 className="text-2xl font-bold mb-6">Completed Courses</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {completedCoursesList.map(course => (
-                <CourseCard key={course.id} course={course} />
-              ))}
+            <h2 className="text-2xl font-bold mb-6">Completed Courses & Certificates</h2>
+            <div className="space-y-4">
+              {completedCoursesList.map(course => {
+                const certificate = user.certificates.find(c => c.courseId === course.id);
+                return (
+                  <div key={course.id} className="p-4 border border-border/50 rounded-lg flex items-center justify-between">
+                    <div>
+                      <h4 className="font-medium">{course.title}</h4>
+                      <p className="text-sm text-muted-foreground">{course.instructor}</p>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-success/10 text-success">Completed</Badge>
+                      {certificate && (
+                        <Button size="sm" variant="outline" onClick={() => setSelectedCertificate(certificate)}>
+                          <Award className="h-4 w-4 mr-2" />
+                          View Certificate
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         )}
+
+        <Dialog open={!!selectedCertificate} onOpenChange={() => setSelectedCertificate(null)}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Your Certificate</DialogTitle>
+            </DialogHeader>
+            {selectedCertificate && <Certificate certificate={selectedCertificate} />}
+          </DialogContent>
+        </Dialog>
 
         {enrolledCourses.length === 0 && (
           <Card className="p-12 text-center">

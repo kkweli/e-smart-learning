@@ -7,6 +7,7 @@ import { AppProvider } from "@/contexts/AppContext";
 import { Header } from "@/components/layout/Header";
 import Home from "./pages/Home";
 import CourseDetail from "./pages/CourseDetail";
+import LessonView from "./pages/LessonView";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import Profile from "./pages/Profile";
@@ -24,15 +25,16 @@ const App = () => (
         <AppProvider>
           <div className="min-h-screen bg-background">
             <Header />
-            <Routes>
-              <Route path="/" element={<Home />} />
-              <Route path="/course/:id" element={<CourseDetail />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/signup" element={<Signup />} />
-              <Route path="/profile" element={<Profile />} />
-              <Route path="/settings" element={<Settings />} />
-              <Route path="*" element={<NotFound />} />
-            </Routes>
+          <Routes>
+            <Route path="/" element={<Home />} />
+            <Route path="/course/:id" element={<CourseDetail />} />
+            <Route path="/course/:courseId/lesson/:lessonId" element={<LessonView />} />
+            <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/settings" element={<Settings />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
           </div>
         </AppProvider>
       </BrowserRouter>
