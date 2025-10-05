@@ -15,7 +15,7 @@ export default function Login() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email || !password) {
@@ -27,13 +27,19 @@ export default function Login() {
       return;
     }
 
-    const success = login(email, password);
+    const success = await login(email, password);
     if (success) {
       toast({
         title: "Welcome back!",
         description: "You've successfully logged in.",
       });
       navigate('/');
+    } else {
+      toast({
+        title: "Error",
+        description: "Invalid email or password",
+        variant: "destructive"
+      });
     }
   };
 

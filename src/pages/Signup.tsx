@@ -16,7 +16,7 @@ export default function Signup() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!name || !email || !password) {
@@ -37,13 +37,19 @@ export default function Signup() {
       return;
     }
 
-    const success = signup(name, email, password);
+    const success = await signup(name, email, password);
     if (success) {
       toast({
         title: "Welcome to LearnAI! 🎉",
         description: "Your account has been created successfully.",
       });
       navigate('/');
+    } else {
+      toast({
+        title: "Error",
+        description: "Failed to create account. Please try again.",
+        variant: "destructive"
+      });
     }
   };
 

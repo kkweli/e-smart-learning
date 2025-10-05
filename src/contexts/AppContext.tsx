@@ -1,4 +1,6 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 export interface QuizQuestion {
   id: string;
@@ -79,13 +81,13 @@ export interface User {
 interface AppContextType {
   user: User | null;
   courses: Course[];
-  login: (email: string, password: string) => boolean;
-  signup: (name: string, email: string, password: string) => boolean;
-  logout: () => void;
-  enrollCourse: (courseId: string) => void;
-  toggleLessonComplete: (courseId: string, lessonId: string) => void;
-  markCourseComplete: (courseId: string) => void;
-  submitQuiz: (courseId: string, lessonId: string | undefined, quizId: string, score: number, totalQuestions: number) => void;
+  login: (email: string, password: string) => Promise<boolean>;
+  signup: (name: string, email: string, password: string) => Promise<boolean>;
+  logout: () => Promise<void>;
+  enrollCourse: (courseId: string) => Promise<void>;
+  toggleLessonComplete: (courseId: string, lessonId: string) => Promise<void>;
+  markCourseComplete: (courseId: string) => Promise<void>;
+  submitQuiz: (courseId: string, lessonId: string | undefined, quizId: string, score: number, totalQuestions: number) => Promise<void>;
   geminiApiKey: string;
   setGeminiApiKey: (key: string) => void;
 }
@@ -96,127 +98,331 @@ import { initialCourses } from '@/data/coursesData';
 
 export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [courses, setCourses] = useState<Course[]>(initialCourses);
+  const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
   const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [loading, setLoading] = useState(true);
 
-  const login = (email: string, password: string): boolean => {
-    // Simple mock login
-    setUser({
-      id: '1',
-      name: 'Demo User',
-      email: email,
-      enrolledCourses: [],
-      completedCourses: [],
-      quizResults: [],
-      certificates: [],
-      streak: 5,
-      badges: ['First Steps', 'Quick Learner']
+  // Initialize auth and load user data
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSupabaseUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setLoading(false);
+      }
     });
-    return true;
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSupabaseUser(session?.user ?? null);
+      if (session?.user) {
+        loadUserProfile(session.user.id);
+      } else {
+        setUser(null);
+        setLoading(false);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Load courses from database
+  useEffect(() => {
+    loadCourses();
+  }, []);
+
+  const loadUserProfile = async (userId: string) => {
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (profile) {
+        const { data: enrollments } = await supabase
+          .from('enrollments')
+          .select('course_id, completed_at')
+          .eq('user_id', userId);
+
+        const { data: certificates } = await supabase
+          .from('certificates')
+          .select('*')
+          .eq('user_id', userId);
+
+        const { data: achievements } = await supabase
+          .from('user_achievements')
+          .select('achievement_type')
+          .eq('user_id', userId);
+
+        setUser({
+          id: profile.id,
+          name: profile.full_name,
+          email: profile.email,
+          enrolledCourses: enrollments?.map(e => e.course_id) || [],
+          completedCourses: enrollments?.filter(e => e.completed_at).map(e => e.course_id) || [],
+          quizResults: [],
+          certificates: certificates?.map(c => ({
+            id: c.id,
+            courseId: c.course_id,
+            courseName: '', // Will be populated from course data
+            userName: profile.full_name,
+            completionDate: new Date(c.issued_at),
+            instructor: ''
+          })) || [],
+          streak: profile.learning_streak || 0,
+          badges: achievements?.map(a => a.achievement_type) || []
+        });
+      }
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const signup = (name: string, email: string, password: string): boolean => {
-    setUser({
-      id: '1',
-      name: name,
-      email: email,
-      enrolledCourses: [],
-      completedCourses: [],
-      quizResults: [],
-      certificates: [],
-      streak: 0,
-      badges: ['First Steps']
-    });
-    return true;
+  const loadCourses = async () => {
+    try {
+      const { data: coursesData } = await supabase
+        .from('courses')
+        .select(`
+          *,
+          lessons (
+            id,
+            title,
+            lesson_order,
+            video_url,
+            video_duration,
+            content_text,
+            key_takeaways,
+            description
+          )
+        `)
+        .eq('is_published', true)
+        .order('created_at', { ascending: false });
+
+      if (coursesData) {
+        const formattedCourses: Course[] = coursesData.map((course: any) => ({
+          id: course.id,
+          title: course.title,
+          description: course.description,
+          instructor: course.instructor_name,
+          duration: `${course.duration_hours} hours`,
+          difficulty: course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1) as any,
+          category: course.category,
+          thumbnail: course.thumbnail_url || '',
+          lessons: course.lessons?.sort((a: any, b: any) => a.lesson_order - b.lesson_order).map((lesson: any) => ({
+            id: lesson.id,
+            title: lesson.title,
+            duration: `${lesson.video_duration} min`,
+            content: lesson.description || '',
+            videoUrl: lesson.video_url || '',
+            textContent: lesson.content_text || '',
+            keyTakeaways: lesson.key_takeaways || [],
+            quiz: { id: '', title: '', passingScore: 70, questions: [] },
+            completed: false,
+            order: lesson.lesson_order
+          })) || [],
+          finalExam: { id: '', title: '', passingScore: 75, questions: [] },
+          enrolledStudents: course.enrolled_count || 0,
+          rating: parseFloat(course.rating || '0'),
+          enrolled: false
+        }));
+        setCourses(formattedCourses);
+      }
+    } catch (error) {
+      console.error('Error loading courses:', error);
+    }
   };
 
-  const logout = () => {
+  const login = async (email: string, password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password });
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Login error:', error);
+      return false;
+    }
+  };
+
+  const signup = async (name: string, email: string, password: string): Promise<boolean> => {
+    try {
+      const { error } = await supabase.auth.signUp({
+        email,
+        password,
+        options: {
+          data: {
+            full_name: name
+          }
+        }
+      });
+      if (error) throw error;
+      return true;
+    } catch (error) {
+      console.error('Signup error:', error);
+      return false;
+    }
+  };
+
+  const logout = async () => {
+    await supabase.auth.signOut();
     setUser(null);
   };
 
-  const enrollCourse = (courseId: string) => {
+  const enrollCourse = async (courseId: string) => {
+    if (!user || !supabaseUser) return;
+    
+    try {
+      await supabase
+        .from('enrollments')
+        .insert({ user_id: user.id, course_id: courseId });
+      
+      setCourses(prev => prev.map(course => 
+        course.id === courseId ? { ...course, enrolled: true } : course
+      ));
+      
+      setUser(prev => prev ? {
+        ...prev,
+        enrolledCourses: [...prev.enrolledCourses, courseId]
+      } : null);
+    } catch (error) {
+      console.error('Error enrolling in course:', error);
+    }
+  };
+
+  const toggleLessonComplete = async (courseId: string, lessonId: string) => {
     if (!user) return;
     
-    setCourses(prev => prev.map(course => 
-      course.id === courseId ? { ...course, enrolled: true } : course
-    ));
-    
-    setUser(prev => prev ? {
-      ...prev,
-      enrolledCourses: [...prev.enrolledCourses, courseId]
-    } : null);
+    try {
+      const course = courses.find(c => c.id === courseId);
+      const lesson = course?.lessons.find(l => l.id === lessonId);
+      const newCompleted = !lesson?.completed;
+
+      await supabase
+        .from('lesson_progress')
+        .upsert({
+          user_id: user.id,
+          lesson_id: lessonId,
+          completed: newCompleted,
+          completed_at: newCompleted ? new Date().toISOString() : null
+        });
+
+      setCourses(prev => prev.map(course => {
+        if (course.id === courseId) {
+          return {
+            ...course,
+            lessons: course.lessons.map(lesson =>
+              lesson.id === lessonId ? { ...lesson, completed: newCompleted } : lesson
+            )
+          };
+        }
+        return course;
+      }));
+    } catch (error) {
+      console.error('Error toggling lesson completion:', error);
+    }
   };
 
-  const toggleLessonComplete = (courseId: string, lessonId: string) => {
-    setCourses(prev => prev.map(course => {
-      if (course.id === courseId) {
-        return {
-          ...course,
-          lessons: course.lessons.map(lesson =>
-            lesson.id === lessonId ? { ...lesson, completed: !lesson.completed } : lesson
-          )
-        };
-      }
-      return course;
-    }));
-  };
-
-  const markCourseComplete = (courseId: string) => {
+  const markCourseComplete = async (courseId: string) => {
     if (!user) return;
 
     const course = courses.find(c => c.id === courseId);
     if (!course) return;
 
-    // Mark all lessons as complete
-    setCourses(prev => prev.map(c => {
-      if (c.id === courseId) {
-        return {
-          ...c,
-          lessons: c.lessons.map(lesson => ({ ...lesson, completed: true }))
-        };
-      }
-      return c;
-    }));
+    try {
+      // Update enrollment completion
+      await supabase
+        .from('enrollments')
+        .update({ 
+          completed_at: new Date().toISOString(),
+          progress_percentage: 100,
+          certificate_issued: true
+        })
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
 
-    // Generate certificate
-    const certificate: Certificate = {
-      id: `cert-${Date.now()}`,
-      courseId: course.id,
-      courseName: course.title,
-      userName: user.name,
-      completionDate: new Date(),
-      instructor: course.instructor
-    };
+      // Generate certificate
+      const certificateNumber = `CERT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+      const verificationCode = `VER-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
 
-    // Add to completed courses and certificates
-    setUser(prev => prev ? {
-      ...prev,
-      completedCourses: [...prev.completedCourses, courseId],
-      certificates: [...prev.certificates, certificate],
-      badges: [...new Set([...prev.badges, 'Course Completed'])]
-    } : null);
+      await supabase
+        .from('certificates')
+        .insert({
+          user_id: user.id,
+          course_id: courseId,
+          certificate_number: certificateNumber,
+          verification_code: verificationCode
+        });
+
+      // Mark all lessons as complete
+      setCourses(prev => prev.map(c => {
+        if (c.id === courseId) {
+          return {
+            ...c,
+            lessons: c.lessons.map(lesson => ({ ...lesson, completed: true }))
+          };
+        }
+        return c;
+      }));
+
+      // Update user state
+      const certificate: Certificate = {
+        id: certificateNumber,
+        courseId: course.id,
+        courseName: course.title,
+        userName: user.name,
+        completionDate: new Date(),
+        instructor: course.instructor
+      };
+
+      setUser(prev => prev ? {
+        ...prev,
+        completedCourses: [...prev.completedCourses, courseId],
+        certificates: [...prev.certificates, certificate],
+        badges: [...new Set([...prev.badges, 'Course Completed'])]
+      } : null);
+    } catch (error) {
+      console.error('Error marking course complete:', error);
+    }
   };
 
-  const submitQuiz = (courseId: string, lessonId: string | undefined, quizId: string, score: number, totalQuestions: number) => {
+  const submitQuiz = async (courseId: string, lessonId: string | undefined, quizId: string, score: number, totalQuestions: number) => {
     if (!user) return;
 
     const percentage = (score / totalQuestions) * 100;
     const passed = percentage >= 70;
 
-    const quizResult: QuizResult = {
-      courseId,
-      lessonId,
-      quizId,
-      score,
-      totalQuestions,
-      passed,
-      completedAt: new Date()
-    };
+    try {
+      await supabase
+        .from('quiz_attempts')
+        .insert({
+          user_id: user.id,
+          quiz_id: quizId,
+          score,
+          total_questions: totalQuestions,
+          passed,
+          answers_json: {}
+        });
 
-    setUser(prev => prev ? {
-      ...prev,
-      quizResults: [...prev.quizResults, quizResult]
-    } : null);
+      const quizResult: QuizResult = {
+        courseId,
+        lessonId,
+        quizId,
+        score,
+        totalQuestions,
+        passed,
+        completedAt: new Date()
+      };
+
+      setUser(prev => prev ? {
+        ...prev,
+        quizResults: [...prev.quizResults, quizResult]
+      } : null);
+    } catch (error) {
+      console.error('Error submitting quiz:', error);
+    }
   };
 
   return (
