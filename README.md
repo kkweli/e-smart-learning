@@ -33,7 +33,46 @@ E-Smart Learning is a modern, AI-powered e-learning platform designed to provide
 
 ## Architecture
 
-The application follows a modern single-page application (SPA) architecture:
+The application follows a modern single-page application (SPA) architecture with a clear separation of concerns between frontend, backend, and AI services.
+
+### System Architecture Diagram
+
+```mermaid
+graph TB
+    A[User Browser] --> B[React Frontend]
+    B --> C[React Router]
+    B --> D[React Context]
+    B --> E[React Query]
+    D --> F[Supabase Client]
+    F --> G[Supabase Backend]
+    G --> H[PostgreSQL Database]
+    G --> I[Supabase Auth]
+    B --> J[Google Gemini API]
+    J --> K[AI Chat Service]
+
+    subgraph "Frontend Layer"
+        B
+        C
+        D
+        E
+    end
+
+    subgraph "Backend Layer"
+        F
+        G
+        H
+        I
+    end
+
+    subgraph "AI Layer"
+        J
+        K
+    end
+
+    style B fill:#e1f5fe
+    style G fill:#f3e5f5
+    style J fill:#e8f5e8
+```
 
 ### Frontend Architecture
 - **Component Structure**: Modular React components organized by feature (courses, quizzes, AI chat, etc.)
@@ -84,14 +123,49 @@ The application follows a modern single-page application (SPA) architecture:
 
 ## Process Flow
 
-### User Journey
-1. **Discovery**: Browse course catalog with search and filtering
-2. **Authentication**: Create account or login to access full features
-3. **Enrollment**: Enroll in courses of interest
-4. **Learning**: Watch video lessons and read supplementary content
-5. **Assessment**: Complete quizzes to test understanding
-6. **Progress**: Track completion and earn certificates
-7. **Support**: Use AI chat for questions and clarification
+### User Journey Flowchart
+
+```mermaid
+flowchart TD
+    A[User Visits Platform] --> B{Browse Courses}
+    B --> C[Search & Filter Courses]
+    C --> D{Authenticated?}
+
+    D -->|No| E[Login/Signup]
+    E --> F[Authentication Success]
+    F --> G[Enroll in Course]
+
+    D -->|Yes| G
+    G --> H[Access Course Content]
+
+    H --> I[Watch Video Lessons]
+    I --> J[Read Supplementary Content]
+    J --> K[Complete Lesson]
+
+    K --> L{Take Quiz}
+    L --> M[Answer Questions]
+    M --> N{Quiz Passed?}
+
+    N -->|No| O[Review Material]
+    O --> L
+
+    N -->|Yes| P[Mark Lesson Complete]
+    P --> Q{More Lessons?}
+
+    Q -->|Yes| I
+    Q -->|No| R[Course Completed]
+
+    R --> S[Generate Certificate]
+    S --> T[Update Achievements]
+
+    H --> U[AI Chat Support]
+    U --> V[Get Contextual Help]
+    V --> W[Continue Learning]
+
+    style A fill:#e3f2fd
+    style R fill:#c8e6c9
+    style S fill:#c8e6c9
+```
 
 ### Learning Workflow
 ```
@@ -99,8 +173,20 @@ Course Selection → Enrollment → Lesson Viewing → Quiz Assessment → Progr
 ```
 
 ### AI Integration Flow
-```
-User Question → Gemini API → Contextual Response → Learning Enhancement
+
+```mermaid
+sequenceDiagram
+    participant U as User
+    participant F as Frontend
+    participant G as Gemini API
+    participant A as AI Response
+
+    U->>F: Asks Question
+    F->>G: Send Query + Context
+    G->>G: Process with AI
+    G->>F: Return Response
+    F->>U: Display Answer
+    U->>F: Continue Learning
 ```
 
 ## Configuration
