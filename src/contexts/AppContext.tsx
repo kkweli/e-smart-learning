@@ -130,7 +130,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Load courses from database
   useEffect(() => {
     loadCourses();
-  }, []);
+  }, [user]);
 
   const loadUserProfile = async (userId: string) => {
     try {
@@ -203,31 +203,61 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
         .order('created_at', { ascending: false });
 
       if (coursesData) {
-        const formattedCourses: Course[] = coursesData.map((course: any) => ({
-          id: course.id,
-          title: course.title,
-          description: course.description,
-          instructor: course.instructor_name,
-          duration: `${course.duration_hours} hours`,
-          difficulty: course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1) as any,
-          category: course.category,
-          thumbnail: course.thumbnail_url || '',
-          lessons: course.lessons?.sort((a: any, b: any) => a.lesson_order - b.lesson_order).map((lesson: any) => ({
-            id: lesson.id,
-            title: lesson.title,
-            duration: `${lesson.video_duration} min`,
-            content: lesson.description || '',
-            videoUrl: lesson.video_url || '',
-            textContent: lesson.content_text || '',
-            keyTakeaways: lesson.key_takeaways || [],
-            quiz: { id: '', title: '', passingScore: 70, questions: [] },
-            completed: false,
-            order: lesson.lesson_order
-          })) || [],
-          finalExam: { id: '', title: '', passingScore: 75, questions: [] },
-          enrolledStudents: course.enrolled_count || 0,
-          rating: parseFloat(course.rating || '0'),
-          enrolled: false
+        const formattedCourses: Course[] = await Promise.all(coursesData.map(async (course: any) => {
+          // Check if user is enrolled
+          let isEnrolled = false;
+          if (user) {
+            const { data: enrollment } = await supabase
+              .from('enrollments')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('course_id', course.id)
+              .maybeSingle();
+            isEnrolled = !!enrollment;
+          }
+
+          // Get lesson progress for enrolled courses
+          const lessonsWithProgress = await Promise.all(course.lessons?.map(async (lesson: any) => {
+            let completed = false;
+            if (user) {
+              const { data: progress } = await supabase
+                .from('lesson_progress')
+                .select('completed')
+                .eq('user_id', user.id)
+                .eq('lesson_id', lesson.id)
+                .maybeSingle();
+              completed = progress?.completed || false;
+            }
+
+            return {
+              id: lesson.id,
+              title: lesson.title,
+              duration: `${lesson.video_duration} min`,
+              content: lesson.description || '',
+              videoUrl: lesson.video_url || '',
+              textContent: lesson.content_text || '',
+              keyTakeaways: lesson.key_takeaways || [],
+              quiz: { id: '', title: '', passingScore: 70, questions: [] },
+              completed,
+              order: lesson.lesson_order
+            };
+          }) || []);
+
+          return {
+            id: course.id,
+            title: course.title,
+            description: course.description,
+            instructor: course.instructor_name,
+            duration: `${course.duration_hours} hours`,
+            difficulty: course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1) as any,
+            category: course.category,
+            thumbnail: course.thumbnail_url || '',
+            lessons: lessonsWithProgress.sort((a: any, b: any) => a.order - b.order),
+            finalExam: { id: '', title: '', passingScore: 75, questions: [] },
+            enrolledStudents: course.enrolled_count || 0,
+            rating: parseFloat(course.rating || '0'),
+            enrolled: isEnrolled
+          };
         }));
         setCourses(formattedCourses);
       }

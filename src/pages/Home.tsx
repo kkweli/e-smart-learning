@@ -16,7 +16,7 @@ export default function Home() {
   const [selectedCategory, setSelectedCategory] = useState('All');
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-  const categories = ['All', 'Web Development', 'Data Science', 'Artificial Intelligence'];
+  const categories = ['All', 'Web Development', 'Data Science', 'Artificial Intelligence', 'Business', 'Creative', 'Personal Development'];
 
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
