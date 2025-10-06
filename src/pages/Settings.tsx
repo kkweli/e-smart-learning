@@ -10,24 +10,15 @@ import { useToast } from '@/hooks/use-toast';
 
 export default function Settings() {
   const navigate = useNavigate();
-  const { geminiApiKey, setGeminiApiKey } = useApp();
-  const [apiKey, setApiKey] = useState(geminiApiKey);
+  const { geminiApiKey } = useApp();
   const [isTestingApi, setIsTestingApi] = useState(false);
   const { toast } = useToast();
 
-  const handleSaveApiKey = () => {
-    setGeminiApiKey(apiKey);
-    toast({
-      title: "API Key Saved",
-      description: "Your Gemini API key has been saved successfully.",
-    });
-  };
-
   const handleTestApi = async () => {
-    if (!apiKey) {
+    if (!geminiApiKey) {
       toast({
-        title: "Error",
-        description: "Please enter an API key first",
+        title: "Configuration Error",
+        description: "AI features are not properly configured. Please contact support.",
         variant: "destructive"
       });
       return;
@@ -36,7 +27,7 @@ export default function Settings() {
     setIsTestingApi(true);
     try {
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${apiKey}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -49,19 +40,19 @@ export default function Settings() {
       if (response.ok) {
         toast({
           title: "Success! ✓",
-          description: "API key is valid and working correctly.",
+          description: "AI features are working correctly.",
         });
       } else {
         toast({
-          title: "Error",
-          description: "API key is invalid or has expired.",
+          title: "Service Unavailable",
+          description: "AI features are temporarily unavailable. Please try again later.",
           variant: "destructive"
         });
       }
     } catch (error) {
       toast({
-        title: "Error",
-        description: "Failed to test API key. Please check your connection.",
+        title: "Connection Error",
+        description: "Unable to connect to AI services. Please check your internet connection.",
         variant: "destructive"
       });
     } finally {
@@ -90,66 +81,51 @@ export default function Settings() {
           <CardHeader>
             <div className="flex items-center gap-2">
               <Key className="h-5 w-5 text-primary" />
-              <CardTitle>Google Gemini API Key</CardTitle>
+              <CardTitle>AI Features Status</CardTitle>
             </div>
             <CardDescription>
-              Configure your API key to enable AI-powered features
+              Check the status of AI-powered learning features
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="space-y-2">
-              <Label htmlFor="apiKey">API Key</Label>
-              <Input
-                id="apiKey"
-                type="password"
-                placeholder="Enter your Gemini API key"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
+            <div className="flex items-center gap-3 p-4 bg-muted/50 rounded-lg border border-border/50">
+              <div className={`w-3 h-3 rounded-full ${geminiApiKey ? 'bg-success' : 'bg-destructive'}`} />
+              <div>
+                <p className="font-medium">
+                  {geminiApiKey ? 'AI Features Active' : 'AI Features Unavailable'}
+                </p>
+                <p className="text-sm text-muted-foreground">
+                  {geminiApiKey ? 'Google Gemini integration is working' : 'AI features are not configured'}
+                </p>
+              </div>
             </div>
 
             <div className="flex gap-3">
-              <Button onClick={handleSaveApiKey} className="bg-gradient-primary">
-                <CheckCircle2 className="mr-2 h-4 w-4" />
-                Save API Key
-              </Button>
-              <Button 
-                onClick={handleTestApi} 
+              <Button
+                onClick={handleTestApi}
                 variant="outline"
-                disabled={isTestingApi}
+                disabled={isTestingApi || !geminiApiKey}
               >
-                {isTestingApi ? 'Testing...' : 'Test Connection'}
+                {isTestingApi ? 'Testing...' : 'Test AI Connection'}
               </Button>
-            </div>
-
-            <div className="bg-muted/50 p-4 rounded-lg space-y-3 border border-border/50">
-              <h4 className="font-semibold text-sm">How to get your API key:</h4>
-              <ol className="text-sm space-y-2 list-decimal list-inside text-muted-foreground">
-                <li>Visit Google AI Studio</li>
-                <li>Sign in with your Google account</li>
-                <li>Click "Get API Key" in the top navigation</li>
-                <li>Create a new API key or use an existing one</li>
-                <li>Copy and paste it above</li>
-              </ol>
-              <a
-                href="https://makersuite.google.com/app/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 text-sm text-primary hover:underline"
-              >
-                Open Google AI Studio
-                <ExternalLink className="h-3 w-3" />
-              </a>
             </div>
 
             <div className="bg-primary/5 p-4 rounded-lg border border-primary/20">
-              <h4 className="font-semibold text-sm mb-2">Important Notes:</h4>
+              <h4 className="font-semibold text-sm mb-2">AI Features Include:</h4>
               <ul className="text-xs space-y-1 text-muted-foreground">
-                <li>• The API key is stored only in your browser session</li>
-                <li>• Google Gemini offers a generous free tier</li>
-                <li>• Never share your API key with others</li>
-                <li>• Rate limits apply based on your API usage</li>
+                <li>• Contextual learning assistance during courses</li>
+                <li>• AI-powered Q&A for lesson content</li>
+                <li>• Smart study recommendations</li>
+                <li>• Instant help with complex topics</li>
               </ul>
+            </div>
+
+            <div className="bg-muted/50 p-4 rounded-lg border border-border/50">
+              <h4 className="font-semibold text-sm mb-2">Need Help?</h4>
+              <p className="text-sm text-muted-foreground">
+                If AI features are not working, please contact support for assistance.
+                The service may be temporarily unavailable due to API limits or maintenance.
+              </p>
             </div>
           </CardContent>
         </Card>

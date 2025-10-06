@@ -50,7 +50,7 @@ export const AIChat = ({ courseContext }: AIChatProps) => {
 
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
     if (!geminiApiKey) {
-      return "Please configure your Gemini API key in Settings to use AI features.";
+      return "AI features are currently unavailable. Please contact support if this issue persists.";
     }
 
     try {
@@ -170,9 +170,9 @@ export const AIChat = ({ courseContext }: AIChatProps) => {
             <div className="flex justify-start animate-fade-in">
               <Card className="max-w-[80%] p-3 border-border/50">
                 <div className="flex gap-1">
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:0ms]" />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:150ms]" />
+                  <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:300ms]" />
                 </div>
               </Card>
             </div>

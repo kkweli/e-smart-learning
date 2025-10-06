@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
@@ -100,7 +100,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   const [user, setUser] = useState<User | null>(null);
   const [supabaseUser, setSupabaseUser] = useState<SupabaseUser | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
-  const [geminiApiKey, setGeminiApiKey] = useState<string>('');
+  const [geminiApiKey, setGeminiApiKey] = useState<string>(import.meta.env.VITE_GEMINI_API_KEY || '');
   const [loading, setLoading] = useState(true);
 
   // Initialize auth and load user data
@@ -130,7 +130,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
   // Load courses from database
   useEffect(() => {
     loadCourses();
-  }, [user]);
+  }, []);
 
   const loadUserProfile = async (userId: string) => {
     try {
@@ -182,7 +182,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
-  const loadCourses = async () => {
+  const loadCourses = useCallback(async () => {
     try {
       const { data: coursesData } = await supabase
         .from('courses')
@@ -217,7 +217,16 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
           }
 
           // Get lesson progress for enrolled courses
-          const lessonsWithProgress = await Promise.all(course.lessons?.map(async (lesson: any) => {
+          const lessonsWithProgress = await Promise.all(course.lessons?.map(async (lesson: {
+            id: string;
+            title: string;
+            lesson_order: number;
+            video_url?: string;
+            video_duration: number;
+            content_text?: string;
+            key_takeaways?: string[];
+            description?: string;
+          }) => {
             let completed = false;
             if (user) {
               const { data: progress } = await supabase
@@ -249,10 +258,10 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
             description: course.description,
             instructor: course.instructor_name,
             duration: `${course.duration_hours} hours`,
-            difficulty: course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1) as any,
+            difficulty: (course.difficulty.charAt(0).toUpperCase() + course.difficulty.slice(1)) as 'Beginner' | 'Intermediate' | 'Advanced',
             category: course.category,
             thumbnail: course.thumbnail_url || '',
-            lessons: lessonsWithProgress.sort((a: any, b: any) => a.order - b.order),
+            lessons: lessonsWithProgress.sort((a: Lesson, b: Lesson) => a.order - b.order),
             finalExam: { id: '', title: '', passingScore: 75, questions: [] },
             enrolledStudents: course.enrolled_count || 0,
             rating: parseFloat(course.rating || '0'),
@@ -264,7 +273,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     } catch (error) {
       console.error('Error loading courses:', error);
     }
-  };
+  }, [user]);
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {

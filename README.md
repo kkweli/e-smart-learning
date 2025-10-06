@@ -198,7 +198,7 @@ The application requires environment variables for external service integration.
 VITE_SUPABASE_URL=your_supabase_project_url
 VITE_SUPABASE_PUBLISHABLE_KEY=your_supabase_publishable_key
 
-# AI Configuration
+# AI Configuration (Centralized - shared across all users)
 VITE_GEMINI_API_KEY=your_gemini_api_key
 ```
 
@@ -206,6 +206,13 @@ VITE_GEMINI_API_KEY=your_gemini_api_key
 - `VITE_SUPABASE_URL`: `https://your-project.supabase.co`
 - `VITE_SUPABASE_PUBLISHABLE_KEY`: `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...`
 - `VITE_GEMINI_API_KEY`: `AIzaSyA1B2C3D4E5F6G7H8I9J0K1L2M3N4O5P6Q7R8S9T0`
+
+### AI Configuration Notes
+- **Centralized Management**: The Gemini API key is now managed centrally by the platform administrator
+- **No User Configuration**: Users no longer need to provide their own API keys
+- **Shared Usage**: All users share the same API key and usage limits
+- **Cost Management**: API costs are managed at the platform level
+- **Automatic Updates**: AI features work immediately for all users without individual setup
 
 ## Usage
 
