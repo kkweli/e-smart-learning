@@ -312,22 +312,37 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
 
   const enrollCourse = async (courseId: string) => {
     if (!user || !supabaseUser) return;
-    
+
+    // Check if already enrolled
+    if (user.enrolledCourses.includes(courseId)) {
+      console.log('User already enrolled in this course');
+      return;
+    }
+
     try {
       await supabase
         .from('enrollments')
         .insert({ user_id: user.id, course_id: courseId });
-      
-      setCourses(prev => prev.map(course => 
+
+      setCourses(prev => prev.map(course =>
         course.id === courseId ? { ...course, enrolled: true } : course
       ));
-      
+
       setUser(prev => prev ? {
         ...prev,
         enrolledCourses: [...prev.enrolledCourses, courseId]
       } : null);
-    } catch (error) {
-      console.error('Error enrolling in course:', error);
+    } catch (error: any) {
+      // Handle duplicate enrollment gracefully
+      if (error.code === '23505' || error.message?.includes('duplicate key')) {
+        console.log('User already enrolled in this course');
+        // Update UI state anyway
+        setCourses(prev => prev.map(course =>
+          course.id === courseId ? { ...course, enrolled: true } : course
+        ));
+      } else {
+        console.error('Error enrolling in course:', error);
+      }
     }
   };
 

@@ -9,11 +9,12 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Award, BookOpen, Clock, Flame, TrendingUp, ArrowLeft } from 'lucide-react';
 import { CourseCard } from '@/components/courses/CourseCard';
 import { Certificate } from '@/components/certificates/Certificate';
+import type { Certificate as CertificateType } from '@/contexts/AppContext';
 
 export default function Profile() {
   const { user, courses } = useApp();
   const navigate = useNavigate();
-  const [selectedCertificate, setSelectedCertificate] = useState<any>(null);
+  const [selectedCertificate, setSelectedCertificate] = useState<CertificateType | null>(null);
 
   if (!user) {
     navigate('/login');
@@ -74,7 +75,7 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-border/50 animate-fade-in" style={{ animationDelay: '50ms' }}>
+          <Card className="bg-gradient-card border-border/50 animate-fade-in [animation-delay:50ms]">
             <CardContent className="p-6 text-center">
               <Award className="h-10 w-10 mx-auto mb-3 text-accent" />
               <div className="text-3xl font-bold mb-1">{completedCoursesList.length}</div>
@@ -82,7 +83,7 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-border/50 animate-fade-in" style={{ animationDelay: '100ms' }}>
+          <Card className="bg-gradient-card border-border/50 animate-fade-in [animation-delay:100ms]">
             <CardContent className="p-6 text-center">
               <Flame className="h-10 w-10 mx-auto mb-3 text-destructive" />
               <div className="text-3xl font-bold mb-1">{user.streak}</div>
@@ -90,7 +91,7 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          <Card className="bg-gradient-card border-border/50 animate-fade-in" style={{ animationDelay: '150ms' }}>
+          <Card className="bg-gradient-card border-border/50 animate-fade-in [animation-delay:150ms]">
             <CardContent className="p-6 text-center">
               <TrendingUp className="h-10 w-10 mx-auto mb-3 text-success" />
               <div className="text-3xl font-bold mb-1">
