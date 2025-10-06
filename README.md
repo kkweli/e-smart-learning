@@ -1,5 +1,11 @@
 # E-Smart Learning
 
+## 🌐 Live Demo
+
+**🚀 [View Live Application](https://e-smart-learning.vercel.app/)**
+
+Experience the AI-powered e-learning platform in action!
+
 ## Overview
 
 E-Smart Learning is a modern, AI-powered e-learning platform designed to provide an interactive and personalized learning experience. The platform offers a comprehensive course catalog with video lessons, interactive quizzes, progress tracking, and AI-assisted learning support. Built with cutting-edge web technologies, it enables learners to master new skills through structured courses while receiving intelligent assistance from AI.
