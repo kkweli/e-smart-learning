@@ -180,7 +180,7 @@ export default function CourseDetail() {
                 )}
                 <div className="flex-1">
                   <div className="flex items-start justify-between gap-4">
-                    <div>
+                    <div className="flex-1">
                       <h4 className="font-medium">
                         {lesson.order}. {lesson.title}
                       </h4>
@@ -193,17 +193,27 @@ export default function CourseDetail() {
                       {lesson.duration}
                     </Badge>
                   </div>
-                  {course.enrolled && user && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="mt-2"
-                      onClick={() => setIsChatOpen(true)}
-                    >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Ask AI about this lesson
-                    </Button>
-                  )}
+                  <div className="flex gap-2 mt-3">
+                    {course.enrolled && user && (
+                      <>
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => navigate(`/course/${course.id}/lesson/${lesson.id}`)}
+                        >
+                          Start Lesson
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsChatOpen(true)}
+                        >
+                          <Sparkles className="h-4 w-4 mr-2" />
+                          Ask AI
+                        </Button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
