@@ -12,7 +12,7 @@ import { Certificate } from '@/components/certificates/Certificate';
 import type { Certificate as CertificateType } from '@/contexts/AppContext';
 
 export default function Profile() {
-  const { user, courses } = useApp();
+  const { user, courses, unenrollCourse } = useApp();
   const navigate = useNavigate();
   const [selectedCertificate, setSelectedCertificate] = useState<CertificateType | null>(null);
 
@@ -101,6 +101,86 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Enrolled Courses */}
+        {enrolledCourses.length > 0 && (
+          <div className="mb-12">
+            <h2 className="text-2xl font-bold mb-6">My Enrolled Courses</h2>
+            <div className="space-y-4">
+              {enrolledCourses.map(course => {
+                const isCompleted = user.completedCourses.includes(course.id);
+                const completedLessons = course.lessons.filter(l => l.completed).length;
+                const totalLessons = course.lessons.length;
+                const progressPercent = totalLessons > 0 ? Math.round((completedLessons / totalLessons) * 100) : 0;
+
+                return (
+                  <div key={course.id} className="p-6 border border-border/50 rounded-lg bg-gradient-card">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <div className="flex items-start gap-4">
+                          <img
+                            src={course.thumbnail}
+                            alt={course.title}
+                            className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                          />
+                          <div className="flex-1">
+                            <h3 className="text-xl font-semibold mb-2">{course.title}</h3>
+                            <p className="text-muted-foreground mb-3 line-clamp-2">{course.description}</p>
+                            <div className="flex items-center gap-4 text-sm text-muted-foreground mb-3">
+                              <span>Instructor: {course.instructor}</span>
+                              <span>•</span>
+                              <span>{course.duration}</span>
+                              <span>•</span>
+                              <span>{totalLessons} lessons</span>
+                            </div>
+                            {!isCompleted && (
+                              <div className="mb-3">
+                                <div className="flex justify-between text-sm mb-1">
+                                  <span>Progress</span>
+                                  <span>{completedLessons}/{totalLessons} lessons ({progressPercent}%)</span>
+                                </div>
+                                <Progress value={progressPercent} className="h-2" />
+                              </div>
+                            )}
+                            <div className="flex items-center gap-2">
+                              {isCompleted ? (
+                                <Badge className="bg-success/10 text-success">Completed</Badge>
+                              ) : (
+                                <Badge className="bg-primary/10 text-primary">In Progress</Badge>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        <Button
+                          variant="default"
+                          size="sm"
+                          onClick={() => navigate(`/course/${course.id}`)}
+                          className="bg-gradient-primary"
+                        >
+                          {isCompleted ? 'Review Course' : 'Continue Learning'}
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            if (window.confirm(`Are you sure you want to unenroll from "${course.title}"? This will remove all your progress.`)) {
+                              unenrollCourse(course.id);
+                            }
+                          }}
+                          className="text-destructive hover:text-destructive"
+                        >
+                          Unenroll
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* In Progress Courses */}
         {inProgressCourses.length > 0 && (

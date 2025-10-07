@@ -9,7 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { ArrowLeft, Clock, BookOpen, Star, Users, CheckCircle2, Sparkles } from 'lucide-react';
 import { FloatingChatButton } from '@/components/ai/FloatingChatButton';
 import { AIChat } from '@/components/ai/AIChat';
-import { Sheet, SheetContent } from '@/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useToast } from '@/hooks/use-toast';
 
 export default function CourseDetail() {
@@ -111,9 +111,9 @@ export default function CourseDetail() {
                 <span className="text-sm text-muted-foreground">{course.instructor}</span>
               </div>
 
-              {!course.enrolled ? (
-                <Button 
-                  size="lg" 
+              {user && !user.enrolledCourses.includes(course.id) ? (
+                <Button
+                  size="lg"
                   onClick={handleEnroll}
                   className="bg-gradient-primary mt-4"
                 >
@@ -135,7 +135,7 @@ export default function CourseDetail() {
 
       {/* Course Content */}
       <div className="container py-12">
-        {course.enrolled && (
+        {user && user.enrolledCourses.includes(course.id) && (
           <Card className="mb-8 bg-gradient-card border-border/50">
             <CardHeader>
               <div className="flex items-center justify-between">
@@ -168,10 +168,9 @@ export default function CourseDetail() {
             {course.lessons.map((lesson, idx) => (
               <div
                 key={lesson.id}
-                className="flex items-start gap-4 p-4 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors animate-fade-in"
-                style={{ animationDelay: `${idx * 50}ms` }}
+                className={`flex items-start gap-4 p-4 rounded-lg border border-border/50 hover:bg-muted/50 transition-colors animate-fade-in [animation-delay:${idx * 50}ms]`}
               >
-                {course.enrolled && user && (
+                {user && user.enrolledCourses.includes(course.id) && (
                   <Checkbox
                     checked={lesson.completed}
                     onCheckedChange={() => toggleLessonComplete(course.id, lesson.id)}
@@ -194,7 +193,7 @@ export default function CourseDetail() {
                     </Badge>
                   </div>
                   <div className="flex gap-2 mt-3">
-                    {course.enrolled && user && (
+                    {user && user.enrolledCourses.includes(course.id) && (
                       <>
                         <Button
                           variant="default"
@@ -222,11 +221,17 @@ export default function CourseDetail() {
       </div>
 
       {/* AI Chat */}
-      {user && course.enrolled && (
+      {user && user.enrolledCourses.includes(course.id) && (
         <>
           <FloatingChatButton isOpen={isChatOpen} onClick={() => setIsChatOpen(!isChatOpen)} />
           <Sheet open={isChatOpen} onOpenChange={setIsChatOpen}>
             <SheetContent side="right" className="w-full sm:w-[500px] p-0">
+              <SheetHeader className="sr-only">
+                <SheetTitle>AI Learning Assistant</SheetTitle>
+                <SheetDescription>
+                  Get help with {course.title} from our AI-powered learning assistant
+                </SheetDescription>
+              </SheetHeader>
               <AIChat courseContext={course.title} />
             </SheetContent>
           </Sheet>

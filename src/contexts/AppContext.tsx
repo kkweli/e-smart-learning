@@ -85,6 +85,7 @@ interface AppContextType {
   signup: (name: string, email: string, password: string) => Promise<boolean>;
   logout: () => Promise<void>;
   enrollCourse: (courseId: string) => Promise<void>;
+  unenrollCourse: (courseId: string) => Promise<void>;
   toggleLessonComplete: (courseId: string, lessonId: string) => Promise<void>;
   markCourseComplete: (courseId: string) => Promise<void>;
   submitQuiz: (courseId: string, lessonId: string | undefined, quizId: string, score: number, totalQuestions: number) => Promise<void>;
@@ -346,6 +347,49 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
     }
   };
 
+  const unenrollCourse = async (courseId: string) => {
+    if (!user || !supabaseUser) return;
+
+    // Check if enrolled
+    if (!user.enrolledCourses.includes(courseId)) {
+      console.log('User is not enrolled in this course');
+      return;
+    }
+
+    try {
+      // Delete enrollment from database
+      await supabase
+        .from('enrollments')
+        .delete()
+        .eq('user_id', user.id)
+        .eq('course_id', courseId);
+
+      // Delete lesson progress
+      await supabase
+        .from('lesson_progress')
+        .delete()
+        .eq('user_id', user.id)
+        .in('lesson_id',
+          courses.find(c => c.id === courseId)?.lessons.map(l => l.id) || []
+        );
+
+      // Update courses state
+      setCourses(prev => prev.map(course =>
+        course.id === courseId ? { ...course, enrolled: false } : course
+      ));
+
+      // Update user state
+      setUser(prev => prev ? {
+        ...prev,
+        enrolledCourses: prev.enrolledCourses.filter(id => id !== courseId),
+        completedCourses: prev.completedCourses.filter(id => id !== courseId)
+      } : null);
+
+    } catch (error) {
+      console.error('Error unenrolling from course:', error);
+    }
+  };
+
   const toggleLessonComplete = async (courseId: string, lessonId: string) => {
     if (!user) return;
     
@@ -487,6 +531,7 @@ export const AppProvider: React.FC<{ children: ReactNode }> = ({ children }) => 
       signup,
       logout,
       enrollCourse,
+      unenrollCourse,
       toggleLessonComplete,
       markCourseComplete,
       submitQuiz,

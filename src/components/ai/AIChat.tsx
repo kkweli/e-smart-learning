@@ -49,38 +49,72 @@ export const AIChat = ({ courseContext }: AIChatProps) => {
   }, [messages]);
 
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
-    if (!geminiApiKey) {
-      return "AI features are currently unavailable. Please contact support if this issue persists.";
+    if (!geminiApiKey || geminiApiKey.trim() === '') {
+      console.log('AI API key not configured properly');
+      return "AI features are currently unavailable. Please configure your Gemini API key in the .env file.";
     }
 
-    try {
-      const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-        {
+    // Try different model endpoints in order of preference
+    const endpoints = [
+      {
+        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiApiKey}`,
+        model: 'gemini-1.5-pro'
+      },
+      {
+        url: `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+        model: 'gemini-pro'
+      },
+      {
+        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
+        model: 'gemini-pro (beta)'
+      }
+    ];
+
+    for (const endpoint of endpoints) {
+      try {
+        console.log(`Trying Gemini API with model: ${endpoint.model}`);
+
+        const response = await fetch(endpoint.url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             contents: [{
-              parts: [{ 
-                text: courseContext 
-                  ? `You are a helpful learning assistant for a course about ${courseContext}. ${userMessage}`
-                  : userMessage 
+              parts: [{
+                text: courseContext
+                  ? `You are a helpful learning assistant for a course about ${courseContext}. Provide detailed, accurate responses based on the course material. ${userMessage}`
+                  : `You are a helpful learning assistant. Provide detailed, educational responses. ${userMessage}`
               }]
             }]
           })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          console.error('API call failed with error:', errorData); // Log the full error
+          console.log(`Model ${endpoint.model} failed with status: ${response.status} ${response.statusText}`);
+          // Continue to next endpoint
+          continue;
         }
-      );
 
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`);
+        const result = await response.json();
+        return result.candidates?.[0]?.content?.parts?.[0]?.text ||
+               "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
+
+      } catch (error) {
+        console.error('Network or parsing error:', error); // Log network issues
+        console.log(`Model ${endpoint.model} network error:`, error);
+        // Continue to next endpoint
       }
-
-      const data = await response.json();
-      return data.candidates?.[0]?.content?.parts?.[0]?.text || "I couldn't generate a response.";
-    } catch (error) {
-      console.error('Gemini API error:', error);
-      return "Sorry, I encountered an error. Please check your API key and try again.";
     }
+
+    // If all endpoints fail, provide helpful fallback
+    return `I'm currently unable to connect to the AI service. This might be due to:
+
+• API service temporarily unavailable
+• Network connectivity issues
+• API key configuration problems
+
+Please try again later or contact support if the issue persists.`;
   };
 
   const handleSend = async () => {
