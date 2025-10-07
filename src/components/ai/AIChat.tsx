@@ -50,31 +50,13 @@ export const AIChat = ({ courseContext }: AIChatProps) => {
 
   const callGeminiAPI = async (userMessage: string): Promise<string> => {
     if (!geminiApiKey || geminiApiKey.trim() === '') {
-      console.log('AI API key not configured properly');
-      return "AI features are currently unavailable. Please configure your Gemini API key in the .env file.";
+      return "AI features are currently unavailable. Please add your Gemini API key in Settings.";
     }
 
-    // Try different model endpoints in order of preference
-    const endpoints = [
-      {
-        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${geminiApiKey}`,
-        model: 'gemini-1.5-pro'
-      },
-      {
-        url: `https://generativelanguage.googleapis.com/v1/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-        model: 'gemini-pro'
-      },
-      {
-        url: `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${geminiApiKey}`,
-        model: 'gemini-pro (beta)'
-      }
-    ];
-
-    for (const endpoint of endpoints) {
-      try {
-        console.log(`Trying Gemini API with model: ${endpoint.model}`);
-
-        const response = await fetch(endpoint.url, {
+    try {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${geminiApiKey}`,
+        {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -86,35 +68,23 @@ export const AIChat = ({ courseContext }: AIChatProps) => {
               }]
             }]
           })
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          console.error('API call failed with error:', errorData); // Log the full error
-          console.log(`Model ${endpoint.model} failed with status: ${response.status} ${response.statusText}`);
-          // Continue to next endpoint
-          continue;
         }
+      );
 
-        const result = await response.json();
-        return result.candidates?.[0]?.content?.parts?.[0]?.text ||
-               "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
-
-      } catch (error) {
-        console.error('Network or parsing error:', error); // Log network issues
-        console.log(`Model ${endpoint.model} network error:`, error);
-        // Continue to next endpoint
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Gemini API error:', response.status, errorText);
+        return "I'm having trouble connecting to the AI service. Please check your API key in Settings or try again later.";
       }
+
+      const result = await response.json();
+      return result.candidates?.[0]?.content?.parts?.[0]?.text ||
+             "I apologize, but I couldn't generate a response. Please try rephrasing your question.";
+
+    } catch (error) {
+      console.error('AI chat error:', error);
+      return "I'm currently unable to connect to the AI service. Please try again later.";
     }
-
-    // If all endpoints fail, provide helpful fallback
-    return `I'm currently unable to connect to the AI service. This might be due to:
-
-• API service temporarily unavailable
-• Network connectivity issues
-• API key configuration problems
-
-Please try again later or contact support if the issue persists.`;
   };
 
   const handleSend = async () => {
