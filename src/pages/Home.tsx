@@ -39,7 +39,7 @@ export default function Home() {
         <div className="container relative py-20 md:py-32">
           <div className="max-w-3xl mx-auto text-center space-y-6 animate-fade-in">
             <h1 className="text-5xl md:text-6xl font-bold bg-gradient-to-r from-primary via-accent to-primary bg-clip-text text-transparent">
-              Learn Smarter with AI
+              Learn with AI E-smart learning
             </h1>
             <p className="text-xl text-muted-foreground">
               Master new skills with AI-powered learning assistance. Get personalized help, instant answers, and adaptive study plans.
